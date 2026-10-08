@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { App as CapacitorApp } from '@capacitor/app';
 import { loadState, saveState, uid } from './storage.js';
 
 const COLORS = ['#1f7a4d', '#0050aa', '#c8102e', '#e4002b', '#f39200', '#6b3fa0', '#008c95', '#5a5a5a'];
@@ -9,11 +10,23 @@ export default function App() {
 
   useEffect(() => saveState(state), [state]);
 
-  // Botón "atrás" de Android: vuelve al inicio en vez de cerrar la app
+  // Navegación con el historial: la pantalla sale de history.state (atrás/adelante del navegador)
   useEffect(() => {
-    const onPop = () => setCurrentStoreId(null);
+    const onPop = (e) => setCurrentStoreId(e.state?.store ?? null);
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  // Botón "atrás" de Android: Capacitor no lo gestiona por sí solo (sin esto cerraría la app).
+  // Si hay historial vuelve atrás (→ popstate → inicio); si estamos en el inicio, cierra la app.
+  useEffect(() => {
+    const handle = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      if (canGoBack) window.history.back();
+      else CapacitorApp.exitApp();
+    });
+    return () => {
+      handle.then((h) => h.remove());
+    };
   }, []);
 
   const openStore = (id) => {
