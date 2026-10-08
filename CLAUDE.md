@@ -67,7 +67,9 @@ Compilar el APK desde terminal (sin Android Studio): `cd android && ./gradlew as
 - Commits pequeños con mensajes en español.
 
 ## Git / GitHub
-- Rama `main`, repo privado en GitHub del usuario (nombre sugerido: `carrito`).
+- Rama `main`, repo privado en GitHub: https://github.com/aropero8/carrito (`origin`).
+- Los commits usan el email noreply de GitHub (`user.email` configurado **solo en este repo**): la cuenta bloquea los push que exponen el email personal. No cambiarlo.
+- `.gitattributes` fuerza LF en `android/gradlew` (y está marcado como ejecutable, `100755`).
 - Ubicación local: `C:\Users\ALBERTO\Desktop\repos\carrito` (Windows).
 - `.gitignore` excluye `node_modules`, `dist`, `.env*`, y los ficheros de firma de Android (`*.jks`, `*.keystore`, `keystore.properties`). **Nunca subir keystores ni secretos.**
 - `android/` sí se versiona (Capacitor genera su propio `android/.gitignore`).
