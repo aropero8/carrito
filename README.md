@@ -16,11 +16,10 @@ npm run dev
 ```
 
 ## Crear la app Android
-Necesitas Android Studio instalado.
+Necesitas Android Studio instalado. El proyecto nativo ya está en `android/`.
 ```bash
 npm install
 npm run build
-npx cap add android      # solo la primera vez
 npx cap sync android
 npx cap open android     # abre Android Studio → botón ▶ para instalarla en el móvil
 ```
@@ -35,6 +34,7 @@ src/
   App.css      estilos (modo claro y oscuro)
   storage.js   guardado local y supermercados por defecto
 capacitor.config.json   configuración de la app Android
+android/                proyecto Android (generado por Capacitor)
 ```
 
 ## Tecnologías
