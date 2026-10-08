@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Icono de la app: carrito blanco sobre el verde de la app (#1f7a4d).
+       De aquí salen los PNG para Android < 8 (con @capacitor/assets; el comando está en CLAUDE.md).
+       El icono adaptativo (Android 8+) es el vector res/drawable-v24/ic_launcher_foreground.xml:
+       si se cambia el dibujo, cambiar los dos. -->
+  <defs>
+    <mask id="ranuras">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <path d="M352 482 H770 M370 548 H748" stroke="#000" stroke-width="26" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <rect width="1024" height="1024" fill="#1f7a4d"/>
+  <g transform="translate(512 512) scale(0.9) translate(-505 -561)" fill="#fff" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
+    <g mask="url(#ranuras)">
+      <polygon points="324,400 800,400 752,610 374,610" stroke-width="48"/>
+    </g>
+    <path d="M210 300 H300 L395 700 H745" fill="none" stroke-width="48"/>
+    <circle cx="440" cy="800" r="46" stroke="none"/>
+    <circle cx="700" cy="800" r="46" stroke="none"/>
+  </g>
+</svg>
