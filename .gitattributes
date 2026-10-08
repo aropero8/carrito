@@ -1,0 +1,5 @@
+# Scripts de shell siempre con LF (si no, ./gradlew falla en Git Bash, Mac y Linux)
+*.sh text eol=lf
+android/gradlew text eol=lf
+# Scripts de Windows con CRLF
+*.bat text eol=crlf
