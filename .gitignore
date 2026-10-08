@@ -1,0 +1,30 @@
+# Dependencias
+node_modules/
+
+# Build web (se regenera con npm run build)
+dist/
+
+# Android: la carpeta android/ SÍ se sube; Capacitor genera su propio
+# android/.gitignore para excluir builds, .gradle y local.properties.
+
+# Variables de entorno / secretos
+.env
+.env.*
+!.env.example
+
+# Firmas de la app Android (¡nunca subirlas!)
+*.jks
+*.keystore
+keystore.properties
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
