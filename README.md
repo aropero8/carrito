@@ -1,5 +1,7 @@
-# Lista de la compra
+# 🛒 Carrito
 
+
+Lista de la compra organizada por supermercado.
 App en React (Vite) preparada para empaquetar en Android con Capacitor.
 
 ## Qué hace

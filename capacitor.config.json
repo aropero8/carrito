@@ -1,5 +1,5 @@
 {
-  "appId": "com.alberto.listacompra",
-  "appName": "Lista de la compra",
+  "appId": "com.alberto.carrito",
+  "appName": "Carrito",
   "webDir": "dist"
 }

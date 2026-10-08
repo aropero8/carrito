@@ -120,7 +120,7 @@ function HomeScreen({ stores, items, onOpenStore, onAddItem, onAddStore }) {
   return (
     <div className="screen">
       <header className="topbar">
-        <h1>🛒 Lista de la compra</h1>
+        <h1>🛒 Carrito</h1>
       </header>
 
       <section className="card">

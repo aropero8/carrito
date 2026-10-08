@@ -1,4 +1,4 @@
-# CLAUDE.md — Lista de la compra
+# CLAUDE.md — Carrito (lista de la compra)
 
 Contexto del proyecto para Claude Code. Léelo antes de tocar nada.
 
@@ -17,7 +17,7 @@ Objetivo final: **app Android** empaquetada con **Capacitor**. Uso personal; el 
 ```
 index.html               entrada Vite (viewport-fit=cover para notch/safe areas)
 vite.config.js           base: './'  ← obligatorio para que funcione en el WebView de Capacitor
-capacitor.config.json    appId com.alberto.listacompra, webDir dist
+capacitor.config.json    appId com.alberto.carrito, appName Carrito, webDir dist
 src/main.jsx             monta <App/>
 src/App.jsx              App (estado global) + HomeScreen + StoreScreen
 src/storage.js           loadState/saveState en localStorage (clave 'lista-compra-v1'), uid(), supermercados por defecto
@@ -65,7 +65,8 @@ npm run android                   # build + sync + abrir
 - Commits pequeños con mensajes en español.
 
 ## Git / GitHub
-- Rama `main`, repo privado en GitHub del usuario.
+- Rama `main`, repo privado en GitHub del usuario (nombre sugerido: `carrito`).
+- Ubicación local: `C:\Users\ALBERTO\Desktop\repos\carrito` (Windows).
 - `.gitignore` excluye `node_modules`, `dist`, `.env*`, y los ficheros de firma de Android (`*.jks`, `*.keystore`, `keystore.properties`). **Nunca subir keystores ni secretos.**
 - `android/` sí se versiona (Capacitor genera su propio `android/.gitignore`).
 - Sin licencia por ahora. Si se hace público, añadir `LICENSE` (MIT).
