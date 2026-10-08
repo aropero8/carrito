@@ -24,7 +24,15 @@ src/App.jsx              App (estado global) + HomeScreen + StoreScreen
 src/storage.js           loadState/saveState en localStorage (clave 'lista-compra-v1'), uid(), supermercados por defecto
 src/App.css              estilos
 android/                 proyecto nativo generado por Capacitor (minSdk 23, targetSdk 35)
+assets/icon-only.svg     diseño del icono (carrito blanco sobre #1f7a4d)
 ```
+
+## Icono de la app
+- **Android 8+ (adaptativo)**: `res/mipmap-anydpi-v26/ic_launcher*.xml` → fondo `@color/ic_launcher_background` (`#1F7A4D`, en `values/`) + primer plano vectorial `res/drawable-v24/ic_launcher_foreground.xml` (también capa `monochrome` para iconos temáticos). Es el mismo dibujo que el SVG, en sus coordenadas de 1024 con dos `group` de transformación; las ranuras de la cesta son huecos de un `clip-path`.
+- **Android < 8**: PNG `mipmap-*/ic_launcher.png` y `ic_launcher_round.png`, generados desde `assets/icon-only.svg` con `npx @capacitor/assets@3.0.5 generate --android`. Después, **revertir `AndroidManifest.xml`** (la herramienta lo reformatea sin cambiar nada).
+- **No poner `icon-foreground`/`icon-background` en `assets/`**: la herramienta generaría las capas adaptativas en PNG a tamaño de 48 dp (bug suyo: se ven borrosas) y sobrescribiría los XML de `mipmap-anydpi-v26`.
+- Si se cambia el dibujo, cambiar el SVG **y** el vector. Ojo: en los comentarios de un SVG no puede haber `--` (rompe el XML y la herramienta lo ignora).
+- El splash de Android ≤ 11 (`drawable*/splash.png`) sigue siendo el de la plantilla de Capacitor; en Android 12+ el sistema muestra el icono de la app.
 
 ## Modelo de datos
 ```js
@@ -65,7 +73,7 @@ Compilar el APK desde terminal (sin Android Studio): `cd android && ./gradlew as
 - Verificado (oct. 2026): `npm install` y `npm run build` sin errores; probado en navegador a 380 px (añadido rápido, pantalla de súper, mover/borrar/vaciar, borrar súper, persistencia, modo claro/oscuro); `./gradlew assembleDebug` compila; probado en emulador Android (API 37): carga, safe areas y botón atrás (súper → inicio → cierra la app), barra de estado blanca en inicio y súper con el sistema en claro y en oscuro. Migración de Carrefour probada en navegador (datos antiguos, color personalizado, súper añadido a mano, instalación nueva).
 - **Sin probar en Android ≤14** (solo hay imagen de API 37). Allí la cabecera detrás de la barra depende de que el WebView del sistema esté actualizado (≥140) para que `env(safe-area-inset-top)` funcione; si el título quedara bajo la barra, esa es la causa.
 - Emulador sin ventana: `emulator -avd Medium_Phone_API_37.0 -no-window -no-snapshot-save`. Si hay un móvil conectado por USB, usar siempre `adb -s emulator-5554` para no instalar nada en él por error.
-- Ideas posibles (no pedidas aún): reordenar productos, sugerencias de productos ya usados, editar nombre/color de un súper, `@capacitor/preferences` en lugar de localStorage, icono y splash de la app (`@capacitor/assets`), compartir la lista.
+- Ideas posibles (no pedidas aún): reordenar productos, sugerencias de productos ya usados, editar nombre/color de un súper, `@capacitor/preferences` en lugar de localStorage, splash propio para Android ≤ 11, compartir la lista.
 
 ## Convenciones
 - **Interfaz y textos en español.** Comentarios en español.
