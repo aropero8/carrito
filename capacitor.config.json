@@ -1,5 +1,11 @@
 {
   "appId": "com.alberto.carrito",
   "appName": "Carrito",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "StatusBar": {
+      "style": "DARK",
+      "overlaysWebView": true
+    }
+  }
 }
