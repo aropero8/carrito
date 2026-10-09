@@ -5,7 +5,7 @@ Contexto del proyecto para Claude Code. Léelo antes de tocar nada.
 ## Qué es
 App personal de lista de la compra organizada **por supermercado**. El usuario elige a qué súper va y ve solo lo que tiene apuntado para ese sitio. Desde la pantalla inicial se pueden añadir productos rápido eligiendo el súper.
 
-Objetivo final: **app Android** empaquetada con **Capacitor**. Uso personal; el repo es **privado en GitHub**, pero se mantiene ordenado por si en el futuro se comparte o se hace público.
+Objetivo final: **app Android** empaquetada con **Capacitor**. Uso personal; el repo es **público en GitHub** con licencia **GPL-3.0-or-later** (`LICENSE`), así que se mantiene ordenado y sin datos sensibles.
 
 ## Stack
 - React 18 + Vite 6 (JavaScript, sin TypeScript)
@@ -84,10 +84,10 @@ Compilar el APK desde terminal (sin Android Studio): `cd android && ./gradlew as
 - Commits pequeños con mensajes en español.
 
 ## Git / GitHub
-- Rama `main`, repo privado en GitHub: https://github.com/aropero8/carrito (`origin`).
+- Rama `main`, repo público en GitHub: https://github.com/aropero8/carrito (`origin`).
 - Los commits usan el email noreply de GitHub (`user.email` configurado **solo en este repo**): la cuenta bloquea los push que exponen el email personal. No cambiarlo.
 - `.gitattributes` fuerza LF en `android/gradlew` (y está marcado como ejecutable, `100755`).
 - Ubicación local: `C:\Users\ALBERTO\Desktop\repos\carrito` (Windows).
 - `.gitignore` excluye `node_modules`, `dist`, `.env*`, `.claude/settings.local.json` (ajustes personales; `.claude/launch.json` sí se sube) y los ficheros de firma de Android (`*.jks`, `*.keystore`, `keystore.properties`). **Nunca subir keystores ni secretos.**
 - `android/` sí se versiona (Capacitor genera su propio `android/.gitignore`).
-- Sin licencia por ahora. Si se hace público, añadir `LICENSE` (MIT).
+- Licencia GPL-3.0-or-later: texto oficial en `LICENSE`, campo `license` en `package.json` y aviso al final del `README.md`. Al ser público, se ve **todo el historial**: antes de cada push, comprobar que no entra nada sensible (keystores, `.env`, emails personales, contraseñas).

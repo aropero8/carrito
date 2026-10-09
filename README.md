@@ -6,7 +6,7 @@ App en React (Vite) preparada para empaquetar en Android con Capacitor.
 
 ## Qué hace
 - **Inicio**: añade productos rápido eligiendo el supermercado con un toque, y ve cuántas cosas tienes pendientes en cada uno.
-- **Pantalla de supermercado**: tu lista para esa tienda; marca lo que metes en el carro, mueve productos a otro súper (⇄), bórralos o vacía lo ya comprado.
+- **Pantalla de supermercado**: tu lista para esa tienda; marca lo que metes en el carro, mueve productos a otro súper, bórralos o quita lo ya comprado (con opción de deshacer).
 - Puedes añadir o borrar supermercados. Todo se guarda en el móvil.
 
 ## Probar en el navegador
@@ -39,3 +39,8 @@ android/                proyecto Android (generado por Capacitor)
 
 ## Tecnologías
 React 18 · Vite · Capacitor 7
+
+## Licencia
+Copyright (C) 2026 aropero8.
+
+Este programa es software libre: puedes redistribuirlo y/o modificarlo bajo los términos de la [Licencia Pública General de GNU](LICENSE) (GPL) publicada por la Free Software Foundation, versión 3 o (a tu elección) cualquier versión posterior. Se distribuye SIN NINGUNA GARANTÍA.
