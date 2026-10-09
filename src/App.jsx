@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { loadState, saveState, uid } from './storage.js';
+import { parseVoice } from './parseVoice.js';
+import { listen, stopListening, voiceAvailable } from './voice.js';
 
 const COLORS = ['#1f7a4d', '#0050aa', '#c8102e', '#e4002b', '#f39200', '#6b3fa0', '#008c95', '#5a5a5a'];
 
@@ -53,11 +55,24 @@ export default function App() {
   };
 
   // ---- acciones ----
-  const addItem = (name, storeId, qty = '') =>
+  const addItem = (name, storeId, qty = '') => {
+    const id = uid();
     setState((s) => ({
       ...s,
-      items: [...s.items, { id: uid(), name: name.trim(), qty: qty.trim(), storeId, done: false, createdAt: Date.now() }],
+      items: [...s.items, { id, name: name.trim(), qty: qty.trim(), storeId, done: false, createdAt: Date.now() }],
     }));
+    return id;
+  };
+
+  // Dictado por voz: se apunta directamente y se ofrece deshacer por si se ha entendido mal
+  const addVoiceItem = ({ name, qty }, storeId) => {
+    const id = addItem(name, storeId, qty);
+    const st = state.stores.find((s) => s.id === storeId);
+    const where = storeId === currentStoreId ? '' : ` a ${st?.name}`;
+    showToast(`«${name}»${qty ? ` (${qty})` : ''} añadido${where}`, () =>
+      setState((s) => ({ ...s, items: s.items.filter((i) => i.id !== id) }))
+    );
+  };
 
   const toggleItem = (id) =>
     setState((s) => ({ ...s, items: s.items.map((i) => (i.id === id ? { ...i, done: !i.done } : i)) }));
@@ -112,6 +127,8 @@ export default function App() {
           items={state.items.filter((i) => i.storeId === store.id)}
           onBack={goHome}
           onAdd={(name, qty) => addItem(name, store.id, qty)}
+          onVoiceAdd={addVoiceItem}
+          onNotice={showToast}
           onToggle={toggleItem}
           onDelete={deleteItem}
           onMove={moveItem}
@@ -133,6 +150,8 @@ export default function App() {
             const st = state.stores.find((s) => s.id === storeId);
             showToast(`«${name.trim()}» añadido a ${st?.name}`);
           }}
+          onVoiceAdd={addVoiceItem}
+          onNotice={showToast}
           onAddStore={addStore}
         />
       )}
@@ -170,10 +189,75 @@ const ICONS = {
   close: 'M6 6l12 12M18 6L6 18',
   plus: 'M12 5v14M5 12h14',
   chevron: 'M9 6l6 6-6 6',
+  mic: 'M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM19 11a7 7 0 0 1-14 0M12 18v3',
 };
 
+/* ---------------- Campo de producto con micrófono ---------------- */
+// El micrófono solo aparece si hay reconocimiento de voz. Pulsarlo mientras escucha termina antes.
+function VoiceField({ inputRef, placeholder, value, onChange, onVoice, onNotice }) {
+  const [available, setAvailable] = useState(false);
+  const [listening, setListening] = useState(false);
+  const session = useRef(null); // escucha en curso: { stopped, gone }
+
+  useEffect(() => {
+    let alive = true;
+    voiceAvailable().then((ok) => alive && setAvailable(ok));
+    return () => {
+      alive = false;
+      // Si se sale de la pantalla mientras escucha, se descarta lo que llegue
+      if (session.current) {
+        session.current.gone = true;
+        stopListening();
+      }
+    };
+  }, []);
+
+  const toggle = async () => {
+    if (session.current) {
+      session.current.stopped = true;
+      stopListening();
+      return;
+    }
+    const s = (session.current = {});
+    setListening(true);
+    try {
+      const matches = await listen();
+      if (!s.gone) onVoice(matches);
+    } catch (e) {
+      // Si lo ha parado el usuario sin llegar a decir nada, no hace falta avisar
+      if (!s.gone && !s.stopped) onNotice(e.message);
+    } finally {
+      session.current = null;
+      if (!s.gone) setListening(false);
+    }
+  };
+
+  return (
+    <div className="voice-field grow">
+      <input
+        ref={inputRef}
+        placeholder={listening ? 'Escuchando…' : placeholder}
+        enterKeyHint="done"
+        value={value}
+        onChange={onChange}
+      />
+      {available && (
+        <button
+          type="button"
+          className={'mic' + (listening ? ' listening' : '')}
+          title={listening ? 'Dejar de escuchar' : 'Añadir por voz'}
+          aria-label={listening ? 'Dejar de escuchar' : 'Añadir por voz'}
+          onClick={toggle}
+        >
+          <Icon d={ICONS.mic} size={20} />
+        </button>
+      )}
+    </div>
+  );
+}
+
 /* ---------------- Pantalla inicial ---------------- */
-function HomeScreen({ stores, items, onOpenStore, onAddItem, onAddStore }) {
+function HomeScreen({ stores, items, onOpenStore, onAddItem, onVoiceAdd, onNotice, onAddStore }) {
   const [name, setName] = useState('');
   const [qty, setQty] = useState('');
   const [storeId, setStoreId] = useState(stores[0]?.id ?? '');
@@ -192,6 +276,18 @@ function HomeScreen({ stores, items, onOpenStore, onAddItem, onAddStore }) {
     setName('');
     setQty('');
     nameRef.current?.focus(); // para seguir añadiendo sin volver a tocar el campo
+  };
+
+  // «queso carrefour» se apunta directamente; si no se ha dicho el súper, se deja escrito para elegirlo
+  const onVoice = (matches) => {
+    const v = parseVoice(matches, stores);
+    if (!v.name) onNotice('No te he entendido. Prueba otra vez');
+    else if (v.storeId) onVoiceAdd(v, v.storeId);
+    else {
+      setName(v.name);
+      setQty(v.qty);
+      onNotice('No he oído el súper: elige uno y pulsa Añadir');
+    }
   };
 
   const submitStore = (e) => {
@@ -224,13 +320,13 @@ function HomeScreen({ stores, items, onOpenStore, onAddItem, onAddStore }) {
       <section className="card add-card" style={{ '--c': selected?.color }}>
         <form onSubmit={submit} className="quick-add">
           <div className="input-row">
-            <input
-              ref={nameRef}
-              className="grow"
+            <VoiceField
+              inputRef={nameRef}
               placeholder="¿Qué necesitas?"
-              enterKeyHint="done"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onVoice={onVoice}
+              onNotice={onNotice}
             />
             <input className="qty" placeholder="Cant." value={qty} onChange={(e) => setQty(e.target.value)} />
           </div>
@@ -295,7 +391,9 @@ function HomeScreen({ stores, items, onOpenStore, onAddItem, onAddStore }) {
 }
 
 /* ---------------- Pantalla de un supermercado ---------------- */
-function StoreScreen({ store, stores, items, onBack, onAdd, onToggle, onDelete, onMove, onClearDone, onDeleteStore }) {
+function StoreScreen({
+  store, stores, items, onBack, onAdd, onVoiceAdd, onNotice, onToggle, onDelete, onMove, onClearDone, onDeleteStore,
+}) {
   const [name, setName] = useState('');
   const [qty, setQty] = useState('');
   const [movingId, setMovingId] = useState(null);
@@ -312,6 +410,13 @@ function StoreScreen({ store, stores, items, onBack, onAdd, onToggle, onDelete, 
     setName('');
     setQty('');
     nameRef.current?.focus();
+  };
+
+  // Por voz se apunta en este súper, salvo que se nombre otro («queso carrefour»)
+  const onVoice = (matches) => {
+    const v = parseVoice(matches, stores);
+    if (v.name) onVoiceAdd(v, v.storeId ?? store.id);
+    else onNotice('No te he entendido. Prueba otra vez');
   };
 
   const renderItem = (i) => (
@@ -378,13 +483,13 @@ function StoreScreen({ store, stores, items, onBack, onAdd, onToggle, onDelete, 
       </header>
 
       <form onSubmit={submit} className="card quick-add row">
-        <input
-          ref={nameRef}
-          className="grow"
+        <VoiceField
+          inputRef={nameRef}
           placeholder="Añadir producto…"
-          enterKeyHint="done"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          onVoice={onVoice}
+          onNotice={onNotice}
         />
         <input className="qty" placeholder="Cant." value={qty} onChange={(e) => setQty(e.target.value)} />
         <button className="primary round" type="submit" aria-label="Añadir" disabled={!name.trim()}>
