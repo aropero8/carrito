@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { loadState, saveState, uid } from './storage.js';
 
@@ -7,6 +7,8 @@ const COLORS = ['#1f7a4d', '#0050aa', '#c8102e', '#e4002b', '#f39200', '#6b3fa0'
 export default function App() {
   const [state, setState] = useState(loadState);
   const [currentStoreId, setCurrentStoreId] = useState(null);
+  const [toast, setToast] = useState(null); // { id, text, onUndo? }
+  const toastTimer = useRef(null);
 
   useEffect(() => saveState(state), [state]);
 
@@ -29,9 +31,21 @@ export default function App() {
     };
   }, []);
 
+  // Aviso temporal en la parte de abajo, con botón «Deshacer» opcional
+  const showToast = (text, onUndo) => {
+    clearTimeout(toastTimer.current);
+    setToast({ id: uid(), text, onUndo });
+    toastTimer.current = setTimeout(() => setToast(null), onUndo ? 4500 : 2000);
+  };
+  const hideToast = () => {
+    clearTimeout(toastTimer.current);
+    setToast(null);
+  };
+
   const openStore = (id) => {
     window.history.pushState({ store: id }, '');
     setCurrentStoreId(id);
+    hideToast();
   };
   const goHome = () => {
     if (window.history.state?.store) window.history.back();
@@ -48,13 +62,35 @@ export default function App() {
   const toggleItem = (id) =>
     setState((s) => ({ ...s, items: s.items.map((i) => (i.id === id ? { ...i, done: !i.done } : i)) }));
 
-  const deleteItem = (id) => setState((s) => ({ ...s, items: s.items.filter((i) => i.id !== id) }));
+  // Quita productos y ofrece deshacer: se vuelven a meter en su sitio (orden por fecha de creación)
+  const removeItems = (removed, text) => {
+    if (removed.length === 0) return;
+    const ids = new Set(removed.map((i) => i.id));
+    setState((s) => ({ ...s, items: s.items.filter((i) => !ids.has(i.id)) }));
+    showToast(text, () =>
+      setState((s) => {
+        const storeIds = new Set(s.stores.map((st) => st.id));
+        const back = removed.filter((i) => storeIds.has(i.storeId) && !s.items.some((x) => x.id === i.id));
+        return { ...s, items: [...s.items, ...back].sort((a, b) => a.createdAt - b.createdAt) };
+      })
+    );
+  };
 
-  const moveItem = (id, storeId) =>
+  const deleteItem = (id) => {
+    const item = state.items.find((i) => i.id === id);
+    if (item) removeItems([item], `«${item.name}» borrado`);
+  };
+
+  const moveItem = (id, storeId) => {
     setState((s) => ({ ...s, items: s.items.map((i) => (i.id === id ? { ...i, storeId } : i)) }));
+    const st = state.stores.find((s) => s.id === storeId);
+    showToast(`Movido a ${st?.name}`);
+  };
 
-  const clearDone = (storeId) =>
-    setState((s) => ({ ...s, items: s.items.filter((i) => !(i.storeId === storeId && i.done)) }));
+  const clearDone = (storeId) => {
+    const removed = state.items.filter((i) => i.storeId === storeId && i.done);
+    removeItems(removed, removed.length === 1 ? '1 producto quitado' : `${removed.length} productos quitados`);
+  };
 
   const addStore = (name) =>
     setState((s) => ({
@@ -67,34 +103,74 @@ export default function App() {
 
   const store = state.stores.find((s) => s.id === currentStoreId);
 
-  return store ? (
-    <StoreScreen
-      store={store}
-      stores={state.stores}
-      items={state.items.filter((i) => i.storeId === store.id)}
-      onBack={goHome}
-      onAdd={(name, qty) => addItem(name, store.id, qty)}
-      onToggle={toggleItem}
-      onDelete={deleteItem}
-      onMove={moveItem}
-      onClearDone={() => clearDone(store.id)}
-      onDeleteStore={() => {
-        if (confirm(`¿Borrar ${store.name} y todos sus productos?`)) {
-          deleteStore(store.id);
-          goHome();
-        }
-      }}
-    />
-  ) : (
-    <HomeScreen
-      stores={state.stores}
-      items={state.items}
-      onOpenStore={openStore}
-      onAddItem={addItem}
-      onAddStore={addStore}
-    />
+  return (
+    <>
+      {store ? (
+        <StoreScreen
+          store={store}
+          stores={state.stores}
+          items={state.items.filter((i) => i.storeId === store.id)}
+          onBack={goHome}
+          onAdd={(name, qty) => addItem(name, store.id, qty)}
+          onToggle={toggleItem}
+          onDelete={deleteItem}
+          onMove={moveItem}
+          onClearDone={() => clearDone(store.id)}
+          onDeleteStore={() => {
+            if (confirm(`¿Borrar ${store.name} y todos sus productos?`)) {
+              deleteStore(store.id);
+              goHome();
+            }
+          }}
+        />
+      ) : (
+        <HomeScreen
+          stores={state.stores}
+          items={state.items}
+          onOpenStore={openStore}
+          onAddItem={(name, storeId, qty) => {
+            addItem(name, storeId, qty);
+            const st = state.stores.find((s) => s.id === storeId);
+            showToast(`«${name.trim()}» añadido a ${st?.name}`);
+          }}
+          onAddStore={addStore}
+        />
+      )}
+      {toast && (
+        <div className="toast" key={toast.id} role="status">
+          <span>{toast.text}</span>
+          {toast.onUndo && (
+            <button
+              className="toast-action"
+              onClick={() => {
+                toast.onUndo();
+                hideToast();
+              }}
+            >
+              Deshacer
+            </button>
+          )}
+        </div>
+      )}
+    </>
   );
 }
+
+/* ---------------- Iconos (SVG en línea, heredan el color del texto) ---------------- */
+const Icon = ({ d, size = 22 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+    strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d={d} />
+  </svg>
+);
+const ICONS = {
+  back: 'M15 18l-6-6 6-6',
+  trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3',
+  move: 'M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7',
+  close: 'M6 6l12 12M18 6L6 18',
+  plus: 'M12 5v14M5 12h14',
+  chevron: 'M9 6l6 6-6 6',
+};
 
 /* ---------------- Pantalla inicial ---------------- */
 function HomeScreen({ stores, items, onOpenStore, onAddItem, onAddStore }) {
@@ -103,7 +179,7 @@ function HomeScreen({ stores, items, onOpenStore, onAddItem, onAddStore }) {
   const [storeId, setStoreId] = useState(stores[0]?.id ?? '');
   const [newStore, setNewStore] = useState('');
   const [showNewStore, setShowNewStore] = useState(false);
-  const [flash, setFlash] = useState('');
+  const nameRef = useRef(null);
 
   useEffect(() => {
     if (!stores.some((s) => s.id === storeId)) setStoreId(stores[0]?.id ?? '');
@@ -113,11 +189,9 @@ function HomeScreen({ stores, items, onOpenStore, onAddItem, onAddStore }) {
     e.preventDefault();
     if (!name.trim() || !storeId) return;
     onAddItem(name, storeId, qty);
-    const st = stores.find((s) => s.id === storeId);
-    setFlash(`«${name.trim()}» añadido a ${st?.name}`);
-    setTimeout(() => setFlash(''), 1800);
     setName('');
     setQty('');
+    nameRef.current?.focus(); // para seguir añadiendo sin volver a tocar el campo
   };
 
   const submitStore = (e) => {
@@ -128,29 +202,45 @@ function HomeScreen({ stores, items, onOpenStore, onAddItem, onAddStore }) {
     setShowNewStore(false);
   };
 
-  const pending = (id) => items.filter((i) => i.storeId === id && !i.done).length;
+  const pendingOf = (id) => items.filter((i) => i.storeId === id && !i.done);
+  const totalPending = items.filter((i) => !i.done).length;
+  const selected = stores.find((s) => s.id === storeId);
 
   return (
     <div className="screen">
-      <header className="topbar">
-        <h1>🛒 Carrito</h1>
+      <header className="topbar home">
+        <div className="title-block">
+          <h1>Carrito</h1>
+          <p className="subtitle">
+            {totalPending === 0
+              ? 'No tienes nada pendiente'
+              : totalPending === 1
+                ? '1 producto pendiente'
+                : `${totalPending} productos pendientes`}
+          </p>
+        </div>
       </header>
 
-      <section className="card">
-        <h2>Añadir rápido</h2>
+      <section className="card add-card" style={{ '--c': selected?.color }}>
         <form onSubmit={submit} className="quick-add">
-          <input
-            className="grow"
-            placeholder="¿Qué necesitas? (p. ej. leche)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <input className="qty" placeholder="Cant." value={qty} onChange={(e) => setQty(e.target.value)} />
-          <div className="chips">
+          <div className="input-row">
+            <input
+              ref={nameRef}
+              className="grow"
+              placeholder="¿Qué necesitas?"
+              enterKeyHint="done"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <input className="qty" placeholder="Cant." value={qty} onChange={(e) => setQty(e.target.value)} />
+          </div>
+          <div className="chips" role="radiogroup" aria-label="Supermercado">
             {stores.map((s) => (
               <button
                 type="button"
                 key={s.id}
+                role="radio"
+                aria-checked={s.id === storeId}
                 className={'chip' + (s.id === storeId ? ' active' : '')}
                 style={{ '--c': s.color }}
                 onClick={() => setStoreId(s.id)}
@@ -160,28 +250,43 @@ function HomeScreen({ stores, items, onOpenStore, onAddItem, onAddStore }) {
             ))}
           </div>
           <button className="primary" type="submit" disabled={!name.trim() || !storeId}>
-            Añadir
+            {selected ? `Añadir a ${selected.name}` : 'Añadir'}
           </button>
         </form>
-        {flash && <p className="flash">{flash}</p>}
       </section>
 
       <h2 className="section-title">¿Dónde vas a comprar?</h2>
       <div className="stores">
-        {stores.map((s) => (
-          <button key={s.id} className="store-card" style={{ '--c': s.color }} onClick={() => onOpenStore(s.id)}>
-            <span className="store-name">{s.name}</span>
-            <span className="badge">{pending(s.id)}</span>
-          </button>
-        ))}
+        {stores.map((s) => {
+          const pending = pendingOf(s.id);
+          return (
+            <button key={s.id} className="store-card" style={{ '--c': s.color }} onClick={() => onOpenStore(s.id)}>
+              <span className="store-top">
+                <span className="store-name">{s.name}</span>
+                <span className={'badge' + (pending.length === 0 ? ' zero' : '')}>{pending.length}</span>
+              </span>
+              <span className="store-preview">
+                {pending.length === 0
+                  ? 'Todo listo'
+                  : pending.slice(0, 3).map((i) => i.name).join(', ') + (pending.length > 3 ? '…' : '')}
+              </span>
+            </button>
+          );
+        })}
         {showNewStore ? (
           <form onSubmit={submitStore} className="store-card new">
-            <input autoFocus placeholder="Nombre" value={newStore} onChange={(e) => setNewStore(e.target.value)} />
-            <button className="primary small" type="submit">OK</button>
+            <input
+              autoFocus
+              placeholder="Nombre del súper"
+              value={newStore}
+              onChange={(e) => setNewStore(e.target.value)}
+              onBlur={() => !newStore.trim() && setShowNewStore(false)}
+            />
+            <button className="primary small" type="submit" disabled={!newStore.trim()}>Crear</button>
           </form>
         ) : (
           <button className="store-card add" onClick={() => setShowNewStore(true)}>
-            + Supermercado
+            <Icon d={ICONS.plus} /> Supermercado
           </button>
         )}
       </div>
@@ -194,9 +299,11 @@ function StoreScreen({ store, stores, items, onBack, onAdd, onToggle, onDelete, 
   const [name, setName] = useState('');
   const [qty, setQty] = useState('');
   const [movingId, setMovingId] = useState(null);
+  const nameRef = useRef(null);
 
   const todo = items.filter((i) => !i.done);
   const done = items.filter((i) => i.done);
+  const progress = items.length ? done.length / items.length : 0;
 
   const submit = (e) => {
     e.preventDefault();
@@ -204,12 +311,16 @@ function StoreScreen({ store, stores, items, onBack, onAdd, onToggle, onDelete, 
     onAdd(name, qty);
     setName('');
     setQty('');
+    nameRef.current?.focus();
   };
 
   const renderItem = (i) => (
     <li key={i.id} className={'item' + (i.done ? ' done' : '')}>
       <label>
         <input type="checkbox" checked={i.done} onChange={() => onToggle(i.id)} />
+        <span className="check" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+        </span>
         <span className="item-name">{i.name}</span>
         {i.qty && <span className="item-qty">{i.qty}</span>}
       </label>
@@ -229,36 +340,79 @@ function StoreScreen({ store, stores, items, onBack, onAdd, onToggle, onDelete, 
         </select>
       ) : (
         <>
-          <button className="icon" title="Mover a otro súper" onClick={() => setMovingId(i.id)}>⇄</button>
-          <button className="icon" title="Borrar" onClick={() => onDelete(i.id)}>✕</button>
+          <button className="icon" title="Mover a otro súper" aria-label="Mover a otro súper" onClick={() => setMovingId(i.id)}>
+            <Icon d={ICONS.move} size={18} />
+          </button>
+          <button className="icon danger" title="Borrar" aria-label="Borrar" onClick={() => onDelete(i.id)}>
+            <Icon d={ICONS.close} size={18} />
+          </button>
         </>
       )}
     </li>
   );
 
   return (
-    <div className="screen">
-      <header className="topbar" style={{ background: store.color }}>
-        <button className="back" onClick={onBack}>‹</button>
-        <h1>{store.name}</h1>
-        <button className="icon light" title="Borrar supermercado" onClick={onDeleteStore}>🗑</button>
+    <div className="screen" style={{ '--c': store.color }}>
+      <header className="topbar store">
+        <button className="icon-btn" aria-label="Volver" onClick={onBack}>
+          <Icon d={ICONS.back} size={26} />
+        </button>
+        <div className="title-block">
+          <h1>{store.name}</h1>
+          <p className="subtitle">
+            {items.length === 0
+              ? 'Lista vacía'
+              : todo.length === 0
+                ? '¡Todo en el carro!'
+                : `${done.length} de ${items.length} en el carro`}
+          </p>
+        </div>
+        <button className="icon-btn" title="Borrar supermercado" aria-label="Borrar supermercado" onClick={onDeleteStore}>
+          <Icon d={ICONS.trash} />
+        </button>
+        {items.length > 0 && (
+          <div className="progress" aria-hidden="true">
+            <div style={{ width: `${progress * 100}%` }} />
+          </div>
+        )}
       </header>
 
       <form onSubmit={submit} className="card quick-add row">
-        <input className="grow" placeholder="Añadir producto…" value={name} onChange={(e) => setName(e.target.value)} />
+        <input
+          ref={nameRef}
+          className="grow"
+          placeholder="Añadir producto…"
+          enterKeyHint="done"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
         <input className="qty" placeholder="Cant." value={qty} onChange={(e) => setQty(e.target.value)} />
-        <button className="primary" type="submit" disabled={!name.trim()}>+</button>
+        <button className="primary round" type="submit" aria-label="Añadir" disabled={!name.trim()}>
+          <Icon d={ICONS.plus} />
+        </button>
       </form>
 
-      {items.length === 0 && <p className="empty">No tienes nada apuntado para {store.name}.</p>}
+      {items.length === 0 && (
+        <div className="empty">
+          <div className="empty-icon">🧺</div>
+          <p>No tienes nada apuntado para {store.name}.</p>
+        </div>
+      )}
+
+      {items.length > 0 && todo.length === 0 && (
+        <div className="empty small">
+          <div className="empty-icon">🎉</div>
+          <p>¡Ya lo tienes todo!</p>
+        </div>
+      )}
 
       {todo.length > 0 && <ul className="list">{todo.map(renderItem)}</ul>}
 
       {done.length > 0 && (
         <>
           <div className="done-header">
-            <h2 className="section-title">En el carro ({done.length})</h2>
-            <button className="link" onClick={onClearDone}>Vaciar</button>
+            <h2 className="section-title">En el carro · {done.length}</h2>
+            <button className="link" onClick={onClearDone}>Quitar de la lista</button>
           </div>
           <ul className="list">{done.map(renderItem)}</ul>
         </>
