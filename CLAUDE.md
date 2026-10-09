@@ -55,8 +55,10 @@ No hay router. `currentStoreId` decide la pantalla (`null` = inicio). Abrir un s
 Configurada en `capacitor.config.json` → `plugins.StatusBar`: `style: "DARK"` (hora e iconos **en blanco**, porque todas las cabeceras tienen fondo de color y texto blanco) y `overlaysWebView: true` (la cabecera se dibuja detrás de la barra; su `padding-top` usa `env(safe-area-inset-top)`). El plugin lo aplica en nativo al arrancar y lo reaplica si cambia el tema del sistema, así que no hay código JS. Si alguna pantalla tuviera cabecera clara, habría que llamar a `StatusBar.setStyle({ style: Style.Light })` al entrar en ella y restaurar `Style.Dark` al salir.
 
 ## Funcionalidad actual
-- Inicio: añadido rápido (nombre + cantidad + chip de súper), tarjetas de supermercados con el número de pendientes, añadir supermercado.
-- Supermercado: añadir producto, marcar/desmarcar (sección «En el carro»), mover a otro súper (⇄), borrar producto, vaciar comprados, borrar supermercado.
+- Inicio: total de pendientes en la cabecera, añadido rápido (nombre + cantidad + chip de súper; el botón toma el color del súper elegido y el foco vuelve al campo para seguir añadiendo), tarjetas de supermercados con el número de pendientes y los primeros productos, añadir supermercado.
+- Supermercado: cabecera y acentos con el color del súper, barra de progreso («X de Y en el carro»), añadir producto, marcar/desmarcar (casilla redonda propia; sección «En el carro»), mover a otro súper, borrar producto, quitar los comprados, borrar supermercado.
+- Avisos (toast) abajo, gestionados en `App`: al añadir desde el inicio, al mover y al borrar. Borrar un producto y «Quitar de la lista» ofrecen **Deshacer** (~4,5 s): los productos vuelven ordenados por `createdAt`.
+- Iconos: SVG en línea (`Icon` + `ICONS` en `App.jsx`), sin dependencias. El color del súper llega al CSS con la variable `--c`; los tonos derivados usan `color-mix()` (WebView ≥ 111).
 
 ## Comandos
 ```bash
