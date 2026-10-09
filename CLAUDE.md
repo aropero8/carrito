@@ -7,7 +7,7 @@ App personal de lista de la compra organizada **por supermercado**. El usuario e
 
 Objetivo final: **app Android** empaquetada con **Capacitor**. Uso personal; el repo es **público en GitHub** con licencia **GPL-3.0-or-later** (`LICENSE`), así que se mantiene ordenado y sin datos sensibles.
 
-La app se llamaba «Carrito» y pasó a llamarse **ToBuy** (oct. 2026). Solo cambió el nombre visible: el `appId`/paquete Android sigue siendo `com.alberto.carrito` y el repo sigue siendo `carrito`. **No cambiar el `appId`**: Android la trataría como otra app y se perderían los datos guardados (localStorage va ligado a la app).
+La app se llamaba «Carrito» y pasó a llamarse **ToBuy** (oct. 2026). Solo cambió el nombre visible: el `appId`/paquete Android sigue siendo `com.alberto.carrito` y la carpeta local sigue siendo `carrito`. El repo de GitHub se renombró de `carrito` a `tobuy` (GitHub redirige la dirección antigua). **No cambiar el `appId`**: Android la trataría como otra app y se perderían los datos guardados (localStorage va ligado a la app).
 
 ## Stack
 - React 18 + Vite 6 (JavaScript, sin TypeScript)
@@ -86,7 +86,7 @@ Compilar el APK desde terminal (sin Android Studio): `cd android && ./gradlew as
 - Commits pequeños con mensajes en español.
 
 ## Git / GitHub
-- Rama `main`, repo público en GitHub: https://github.com/aropero8/carrito (`origin`).
+- Rama `main`, repo público en GitHub: https://github.com/aropero8/tobuy (`origin`).
 - Los commits usan el email noreply de GitHub (`user.email` configurado **solo en este repo**): la cuenta bloquea los push que exponen el email personal. No cambiarlo.
 - `.gitattributes` fuerza LF en `android/gradlew` (y está marcado como ejecutable, `100755`).
 - Ubicación local: `C:\Users\ALBERTO\Desktop\repos\carrito` (Windows).
