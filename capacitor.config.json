@@ -1,6 +1,6 @@
 {
   "appId": "com.alberto.carrito",
-  "appName": "Carrito",
+  "appName": "ToBuy",
   "webDir": "dist",
   "plugins": {
     "StatusBar": {

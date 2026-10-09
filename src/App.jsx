@@ -210,7 +210,7 @@ function HomeScreen({ stores, items, onOpenStore, onAddItem, onAddStore }) {
     <div className="screen">
       <header className="topbar home">
         <div className="title-block">
-          <h1>Carrito</h1>
+          <h1>ToBuy</h1>
           <p className="subtitle">
             {totalPending === 0
               ? 'No tienes nada pendiente'

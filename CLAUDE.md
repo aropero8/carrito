@@ -1,4 +1,4 @@
-# CLAUDE.md — Carrito (lista de la compra)
+# CLAUDE.md — ToBuy (lista de la compra)
 
 Contexto del proyecto para Claude Code. Léelo antes de tocar nada.
 
@@ -6,6 +6,8 @@ Contexto del proyecto para Claude Code. Léelo antes de tocar nada.
 App personal de lista de la compra organizada **por supermercado**. El usuario elige a qué súper va y ve solo lo que tiene apuntado para ese sitio. Desde la pantalla inicial se pueden añadir productos rápido eligiendo el súper.
 
 Objetivo final: **app Android** empaquetada con **Capacitor**. Uso personal; el repo es **público en GitHub** con licencia **GPL-3.0-or-later** (`LICENSE`), así que se mantiene ordenado y sin datos sensibles.
+
+La app se llamaba «Carrito» y pasó a llamarse **ToBuy** (oct. 2026). Solo cambió el nombre visible: el `appId`/paquete Android sigue siendo `com.alberto.carrito` y el repo sigue siendo `carrito`. **No cambiar el `appId`**: Android la trataría como otra app y se perderían los datos guardados (localStorage va ligado a la app).
 
 ## Stack
 - React 18 + Vite 6 (JavaScript, sin TypeScript)
@@ -17,7 +19,7 @@ Objetivo final: **app Android** empaquetada con **Capacitor**. Uso personal; el 
 ```
 index.html               entrada Vite (viewport-fit=cover para notch/safe areas)
 vite.config.js           base: './'  ← obligatorio para que funcione en el WebView de Capacitor
-capacitor.config.json    appId com.alberto.carrito, appName Carrito, webDir dist, config de StatusBar
+capacitor.config.json    appId com.alberto.carrito, appName ToBuy, webDir dist, config de StatusBar
 .claude/launch.json      servidor de desarrollo para las vistas previas de Claude Code (puerto 5181)
 src/main.jsx             monta <App/>
 src/App.jsx              App (estado global) + HomeScreen + StoreScreen

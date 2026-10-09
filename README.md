@@ -1,4 +1,4 @@
-# 🛒 Carrito
+# 🛒 ToBuy
 
 
 Lista de la compra organizada por supermercado.
