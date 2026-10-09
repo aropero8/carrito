@@ -11,7 +11,7 @@ La app se llamaba «Carrito» y pasó a llamarse **ToBuy** (oct. 2026). Solo cam
 
 ## Stack
 - React 18 + Vite 6 (JavaScript, sin TypeScript)
-- Capacitor 7 (`@capacitor/core`, `@capacitor/android`, `@capacitor/cli`, `@capacitor/app` para el botón atrás, `@capacitor/status-bar` para la barra de estado)
+- Capacitor 7 (`@capacitor/core`, `@capacitor/android`, `@capacitor/cli`, `@capacitor/app` para el botón atrás, `@capacitor/status-bar` para la barra de estado) + un plugin nativo propio, `VoicePlugin`, para el dictado por voz
 - CSS plano en `src/App.css` (sin librerías de UI), con modo claro/oscuro vía `prefers-color-scheme`
 - Sin backend: datos solo en el dispositivo
 
@@ -22,10 +22,13 @@ vite.config.js           base: './'  ← obligatorio para que funcione en el Web
 capacitor.config.json    appId com.alberto.carrito, appName ToBuy, webDir dist, config de StatusBar
 .claude/launch.json      servidor de desarrollo para las vistas previas de Claude Code (puerto 5181)
 src/main.jsx             monta <App/>
-src/App.jsx              App (estado global) + HomeScreen + StoreScreen
+src/App.jsx              App (estado global) + HomeScreen + StoreScreen + VoiceField (campo con micrófono)
 src/storage.js           loadState/saveState en localStorage (clave 'lista-compra-v1'), uid(), supermercados por defecto
+src/voice.js             reconocimiento de voz: voiceAvailable(), listen(), stopListening()
+src/parseVoice.js        parseVoice(alternativas, stores) → { name, qty, storeId|null } (función pura)
 src/App.css              estilos
 android/                 proyecto nativo generado por Capacitor (minSdk 23, targetSdk 35)
+  app/src/main/java/com/alberto/carrito/VoicePlugin.java   plugin propio de voz (registrado en MainActivity)
 assets/icon-only.svg     diseño del icono (carrito blanco sobre #1f7a4d)
 ```
 
@@ -56,10 +59,20 @@ No hay router. `currentStoreId` decide la pantalla (`null` = inicio). Abrir un s
 ## Barra de estado (Android)
 Configurada en `capacitor.config.json` → `plugins.StatusBar`: `style: "DARK"` (hora e iconos **en blanco**, porque todas las cabeceras tienen fondo de color y texto blanco) y `overlaysWebView: true` (la cabecera se dibuja detrás de la barra; su `padding-top` usa `env(safe-area-inset-top)`). El plugin lo aplica en nativo al arrancar y lo reaplica si cambia el tema del sistema, así que no hay código JS. Si alguna pantalla tuviera cabecera clara, habría que llamar a `StatusBar.setStyle({ style: Style.Light })` al entrar en ella y restaurar `Style.Dark` al salir.
 
+## Dictado por voz
+- **Motor en Android**: plugin nativo propio `VoicePlugin.java` (`registerPlugin('Voice')` en `voice.js`; se registra en `MainActivity` antes de `super.onCreate`). Usa el `SpeechRecognizer` del sistema (normalmente el de Google; el WebView no trae la Web Speech API), idioma `es-ES`, 5 alternativas, sin diálogo de Google: la interfaz propia muestra «Escuchando…» y el micrófono relleno con pulso. Métodos: `available()`, `listen({ language })` → `{ matches }` o rechazo con `code` `permission`/`nomatch`/`network`/`failed` (pide el permiso `RECORD_AUDIO` si hace falta), `stop()`. El manifiesto declara `RECORD_AUDIO` y la `<queries>` de `RecognitionService` (necesaria en Android 11+).
+- **No usar `@capacitor-community/speech-recognition`** (se probó en oct. 2026): destruye y crea un `SpeechRecognizer` en cada escucha y en Android 12+ todas menos la primera fallan al instante («Service is unbinding»). Por eso el plugin propio reutiliza un único reconocedor (solo lo recrea si el servicio se desconecta, `ERROR_SERVER_DISCONNECTED`).
+- En el navegador (`npm run dev`) se usa `SpeechRecognition`/`webkitSpeechRecognition` si existe. Si no hay motor, no se muestra el micrófono. `voice.js` traduce los códigos de error a avisos en español (el `message` del error ya es el texto del toast).
+- **Interpretación** (`parseVoice.js`): busca el nombre de un súper en la frase (sin tildes ni mayúsculas, pegando palabras: «Ahorra Más» = «Ahorramas»; si hay varios, gana el último), lo quita junto con «en / el / del / para…» delante, quita órdenes al principio («apunta», «hace falta», «necesito»…) y «por favor» al final, y saca la cantidad del principio («2», «2 kilos de», «medio kilo de», «una docena de»; «un/una» sin unidad es artículo). De las alternativas se queda con la primera que nombre un súper. No separa varios productos: «leche y huevos» se apunta como uno.
+- **Comportamiento**: en el inicio, si se dice el súper se apunta directamente; si no, deja el texto en el campo para elegir el súper. En un súper se apunta en ese, salvo que se nombre otro. Todo añadido por voz muestra un toast con **Deshacer**. Pulsar el micrófono mientras escucha termina antes (sin aviso si no se dijo nada); salir de la pantalla mientras escucha descarta el resultado.
+- Para probarlo en la vista previa sin micrófono, se puede sustituir `SpeechRecognition.prototype.start` por uno que llame a `onresult`/`onend` con frases de prueba.
+- Probado (oct. 2026): interpretación de frases y flujo completo en el navegador simulando el reconocedor; en el emulador (API 37), permiso (denegar y conceder), escucha repetida, parar a mano y aviso sin voz. **Falta probar el reconocimiento de una frase real en un móvil**: el emulador se arrancó sin `-allow-host-audio` (micrófono en silencio).
+
 ## Funcionalidad actual
 - Inicio: total de pendientes en la cabecera, añadido rápido (nombre + cantidad + chip de súper; el botón toma el color del súper elegido y el foco vuelve al campo para seguir añadiendo), tarjetas de supermercados con el número de pendientes y los primeros productos, añadir supermercado.
 - Supermercado: cabecera y acentos con el color del súper, barra de progreso («X de Y en el carro»), añadir producto, marcar/desmarcar (casilla redonda propia; sección «En el carro»), mover a otro súper, borrar producto, quitar los comprados, borrar supermercado.
 - Avisos (toast) abajo, gestionados en `App`: al añadir desde el inicio, al mover y al borrar. Borrar un producto y «Quitar de la lista» ofrecen **Deshacer** (~4,5 s): los productos vuelven ordenados por `createdAt`.
+- Voz: micrófono dentro del campo de producto (inicio y súper). Ver «Dictado por voz».
 - Iconos: SVG en línea (`Icon` + `ICONS` en `App.jsx`), sin dependencias. El color del súper llega al CSS con la variable `--c`; los tonos derivados usan `color-mix()` (WebView ≥ 111).
 
 ## Comandos
